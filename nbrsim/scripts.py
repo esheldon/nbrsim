@@ -243,7 +243,7 @@ command: |
     logfile="%(logfile)s"
     tmp_logfile="$(basename $logfile)"
     tmp_logfile="$TMPDIR/$tmp_logfile"
-    bash %(script)s &> "$tmp_logfile"
+    /usr/bin/time bash %(script)s &> "$tmp_logfile"
 
     mv -vf "$tmp_logfile" "$logfile"
 
