@@ -114,7 +114,7 @@ def plot_sizemag(data, filename):
         type='circle',
         size=1.0,
         color='steelblue',
-        label='all'
+        label='star'
     )
 
     plt.add(pts,spts)
@@ -198,7 +198,7 @@ def run_sextractor(wdir, root, img_file, sat, fwhm, noweight):
             "-WEIGHT_IMAGE {img_file}[2]",
         ]
     if fwhm != 0:
-        cat_cmd += [" -SEEING_FWHM {fwhm}"]
+        cat_cmd += ["-SEEING_FWHM {fwhm}"]
 
     if sat != -1:
         cat_cmd += ["-SATUR_LEVEL {sat}"]
