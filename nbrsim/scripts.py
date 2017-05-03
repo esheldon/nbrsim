@@ -47,6 +47,7 @@ class ScriptWriter(dict):
 
             self._write_galsim_script(i)
             self._write_reduce_script(i)
+            self._write_meds_script(i)
 
     def _write_galsim_script(self, index):
         """
@@ -77,10 +78,24 @@ class ScriptWriter(dict):
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
+    def _write_meds_script(self, index):
+        """
+        write the basic bash script
+        """
+
+        self['index'] = index
+        text=_meds_script_template % self
+
+        script_fname=files.get_meds_script_file(self['run'], index)
+        print("writing:",script_fname)
+        with open(script_fname, 'w') as fobj:
+            fobj.write(text)
+
 
     def _write_wq(self, index):
         self._write_galsim_wq(index)
         self._write_reduce_wq(index)
+        self._write_meds_wq(index)
 
     def _write_galsim_wq(self, index):
         """
@@ -146,6 +161,38 @@ class ScriptWriter(dict):
         with open(wq_fname,'w') as fobj:
             fobj.write(text)
 
+    def _write_meds_wq(self, index):
+        """
+        write the wq submission script
+        """
+
+        wq_dir = files.get_wq_dir(self['run'])
+        if not os.path.exists(wq_dir):
+            os.makedirs(wq_dir)
+
+        wq_fname=files.get_meds_wq_file(self['run'], index)
+
+        if self.missing:
+            wq_fname = wq_fname.replace('.yaml','-missing.yaml')
+
+            meds_file = files.get_meds_file(self['run'], index)
+            if os.path.exists(meds_file):
+                if os.path.exists(wq_fname):
+                    os.remove(wq_fname)
+                return
+
+        job_name = os.path.basename(wq_fname)
+        job_name = job_name.replace('.yaml','')
+
+        self['job_name'] = job_name
+        self['logfile']  = files.get_meds_log_file(self['run'], index)
+        self['script']   =files.get_meds_script_file(self['run'], index)
+        text = _meds_wq_template  % self
+
+        print("writing:",wq_fname)
+        with open(wq_fname,'w') as fobj:
+            fobj.write(text)
+
 
     def _makedirs(self):
         """
@@ -153,14 +200,15 @@ class ScriptWriter(dict):
         """
 
         dirs=[]
-        script_dir = files.get_script_dir(self['run'])
-
-        dirs += [script_dir]
 
         for i in xrange(self['njobs']):
             output_dir = files.get_output_dir(self['run'],i)
+            script_dir = files.get_script_dir(self['run'],i)
 
             dirs += [output_dir]
+
+            if script_dir != output_dir:
+                dirs += [script_dir]
 
         for d in dirs:
             if not os.path.exists(d):
@@ -226,3 +274,29 @@ command: |
 
 job_name: "%(job_name)s"
 """
+
+#
+# MEDS making
+#
+
+_meds_script_template = """#!/bin/bash
+# set up environment before running this script
+
+nbrsim-make-meds %(run)s %(index)d
+"""
+
+_meds_wq_template = """#!/bin/bash
+command: |
+    %(extra_commands)s
+
+    logfile="%(logfile)s"
+    tmp_logfile="$(basename $logfile)"
+    tmp_logfile="$TMPDIR/$tmp_logfile"
+    bash %(script)s &> "$tmp_logfile"
+
+    mv -vf "$tmp_logfile" "$logfile"
+
+job_name: "%(job_name)s"
+"""
+
+

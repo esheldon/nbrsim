@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 hacked up version of Mike Jarvis' code for processing
-DES data
+DES data. This code is a mess and needs to be cleaned up.
 """
 # Run PSFEx for a set of exposures, including making any necessarily input files.
 
@@ -15,6 +15,7 @@ import glob
 import time
 import fitsio
 import shutil
+import biggles
 
 from nbrsim import files
 
@@ -68,9 +69,6 @@ def parse_args():
     parser.add_argument('--run_piff', default=0, type=int,
                         help='run piff on files')
 
-    parser.add_argument('--use_findstars', default=1, type=int,
-                        help='use findstars results in psfex')
-
     parser.add_argument('--mag_cut', default=-1, type=float,
                         help='remove the top mags using mag_auto')
     parser.add_argument('--nbright_stars', default=10, type=int,
@@ -87,6 +85,45 @@ def parse_args():
         args.run_psfex = False
     return args
 
+def plot_sizemag(data, filename):
+
+    key=biggles.PlotKey(0.1, 0.9, halign='left')
+
+    plt = biggles.FramedPlot(
+        xlabel='mag',
+        ylabel='T',
+        aspect_ratio=1.0/1.618,
+        xrange=[16,26],
+        yrange=[0,2],
+        key=key,
+    )
+
+    wstar,=numpy.where(data['star_flag'] == 1)
+
+    T = 2*data['sigma0']**2
+    pts = biggles.Points(
+        data['mag'],
+        T,
+        type='dot',
+        label='all'
+    )
+
+    spts = biggles.Points(
+        data['mag'][wstar],
+        T[wstar],
+        type='circle',
+        size=1.0,
+        color='steelblue',
+        label='all'
+    )
+
+    plt.add(pts,spts)
+
+    print("writing sizemag diagram:",filename)
+    plt.write(filename)
+
+
+
 def parse_file_name(file_name):
     """Parse the file name to get the directory, the root name, and the chip number
     """
@@ -102,20 +139,6 @@ def parse_file_name(file_name):
     root = os.path.splitext(base_file)[0]
 
     return root
-
-
-def copy_img_file(file_name, wdir):
-    """Create the unpacked file in the work directory if necessary.
-
-    If the unpacked file already exists, then a link is made.
-    Otherwise funpack is run, outputting the result into the work directory.
-    """
-
-    bname=os.path.basename(file_name)
-    tfile = os.path.join(wdir, bname)
-    shutil.copy(file_name, tfile)
-
-    return tfile
 
 def read_image_header(img_file):
     """Read some information from the image header.
@@ -142,7 +165,9 @@ def run_sextractor(wdir, root, img_file, sat, fwhm, noweight):
     """Run sextractor, but only if the output file does not exist yet.
     """
 
-    print('-'*70)
+    print('\n' + '-'*70)
+    print('   running sextractor')
+
     sx_exe = files.get_sx_exe()
 
     sx_config = files.get_sx_config()
@@ -150,61 +175,114 @@ def run_sextractor(wdir, root, img_file, sat, fwhm, noweight):
     sx_filter = files.get_sx_filter()
     sx_nnw = files.get_sx_nnw()
 
-
     cat_file = os.path.join(wdir,root.replace('-image','-%s' % CATBACK) + '.fits')
+    seg_file = os.path.join(wdir,root.replace('-image','-%s' % 'seg') + '.fits')
 
-    print('   running sextractor')
-    cat_cmd = "{sx_exe} {img_file}[0] -c {sx_config} -CATALOG_NAME {cat_file} -CATALOG_TYPE FITS_LDAC -PARAMETERS_NAME {sx_params} -FILTER_NAME {sx_filter}  -STARNNW_NAME {sx_nnw} -DETECT_MINAREA 3".format(
-        sx_exe=sx_exe, img_file=img_file, sx_config=sx_config,
-        cat_file=cat_file, sx_params=sx_params, sx_filter=sx_filter,
-        sx_nnw=sx_nnw, fwhm=fwhm, sat=sat)
+    cat_cmd = [
+        "{sx_exe}",
+        "{img_file}[0]",
+        "-c {sx_config}",
+        "-CATALOG_NAME {cat_file}",
+        "-CATALOG_TYPE FITS_LDAC",
+        "-PARAMETERS_NAME {sx_params}",
+        "-FILTER_NAME {sx_filter}",
+        "-STARNNW_NAME {sx_nnw}",
+        "-DETECT_MINAREA 3",
+        "-CHECKIMAGE_TYPE SEGMENTATION",
+        "-CHECKIMAGE_NAME {seg_file}",
+    ]
+
     if not noweight:
-        cat_cmd += " -WEIGHT_TYPE MAP_WEIGHT -WEIGHT_IMAGE {img_file}[2]".format(img_file=img_file)
+        cat_cmd += [
+            "-WEIGHT_TYPE MAP_WEIGHT",
+            "-WEIGHT_IMAGE {img_file}[2]",
+        ]
     if fwhm != 0:
-        cat_cmd += " -SEEING_FWHM {fwhm}".format(fwhm=fwhm)
+        cat_cmd += [" -SEEING_FWHM {fwhm}"]
+
     if sat != -1:
-        cat_cmd += " -SATUR_LEVEL {sat}".format(sat=sat)
+        cat_cmd += ["-SATUR_LEVEL {sat}"]
+
+    cat_cmd = "  \\\n    ".join(cat_cmd)
+    #cat_cmd = r"""
+    #{sx_exe} \
+    #        {img_file}[0] \
+    #        -c {sx_config} \
+    #        -CATALOG_NAME {cat_file} \
+    #        -CATALOG_TYPE FITS_LDAC \
+    #        -PARAMETERS_NAME {sx_params} \
+    #        -FILTER_NAME {sx_filter} \
+    #        -STARNNW_NAME {sx_nnw} \
+    #        -DETECT_MINAREA 3 \
+    #        -CHECKIMAGE_TYPE SEGMENTATION \
+    #        -CHECKIMAGE_NAME {seg_file}
+    #"""
+    cat_cmd = cat_cmd.format(
+        sx_exe=sx_exe,
+        img_file=img_file,
+        sx_config=sx_config,
+        cat_file=cat_file,
+        sx_params=sx_params,
+        sx_filter=sx_filter,
+        sx_nnw=sx_nnw,
+        seg_file=seg_file,
+        fwhm=fwhm,
+        sat=sat,
+    )
+
     print(cat_cmd)
     os.system(cat_cmd)
-    return cat_file
+    return cat_file, seg_file
 
 def run_findstars(wdir, root, cat_file):
     """
     Run findstars, and return a new updated catalog file to use.
     """
 
-    print('-'*70)
+    print('\n' + '-'*70)
     fs_exe = files.get_findstars_exe()
 
-    #default='/astro/u/mjarvis/rmjarvis/DESWL/psfex/wl.config  +/astro/u/esheldon/lensing/nbrsim/test/findstars_sim.config',
 
     fs_config = files.get_wl_config() + ' +'+files.get_findstars_config()
 
-    star_file = wdir+'/'+root+'_findstars.fits'    
+    findstars_file = wdir+'/'+root.replace('-image','-findstars.fits')
 
     # run find stars
     print('   running findstars')
-    #findstars_cmd = '{fs_exe} {fs_config} root={root} cat_ext=-{catback}.fits stars_file={star_file} input_prefix={wdir}/'.format(
-    findstars_cmd = '{fs_exe} {fs_config} root={root} cat_file={cat_file} stars_file={star_file} input_prefix={wdir}/'.format(
-            fs_exe=fs_exe, fs_config=fs_config, root=root, star_file=star_file, wdir=wdir, cat_file=cat_file)
+    findstars_cmd = r"""
+    {fs_exe} \
+            {fs_config} \
+            root={root} \
+            cat_file={cat_file} \
+            stars_file={findstars_file} \
+            input_prefix={wdir}/
+    """
+    findstars_cmd = findstars_cmd.format(
+        fs_exe=fs_exe,
+        fs_config=fs_config,
+        root=root,
+        findstars_file=findstars_file,
+        wdir=wdir,
+        cat_file=cat_file,
+    )
     print(findstars_cmd)
     os.system(findstars_cmd)
 
-    if not os.path.exists(star_file):
+    if not os.path.exists(findstars_file):
         print('   Error running findstars.  Rerun with verbose=2.')
-        findstars_cmd = '{fs_exe} {fs_config} root={root} cat_ext=-{catback}.fits stars_file={star_file} input_prefix={wdir}/ verbose=2 debug_ext=_fs.debug'.format(
-            fs_exe=fs_exe, fs_config=fs_config, root=root, star_file=star_file, 
+        findstars_cmd = '{fs_exe} {fs_config} root={root} cat_ext=-{catback}.fits stars_file={findstars_file} input_prefix={wdir}/ verbose=2 debug_ext=_fs.debug'.format(
+            fs_exe=fs_exe, fs_config=fs_config, root=root, findstars_file=findstars_file, 
             wdir=wdir,
             catback=CATBACK,
         )
         print(findstars_cmd)
         os.system(findstars_cmd)
         print('   The debug file is',root + '_fs.debug')
-        if not os.path.exists(star_file):
+        if not os.path.exists(findstars_file):
             return None, None, None
 
     # Make a mask based on which objects findstars decided are stars.
-    with pyfits.open(star_file,memmap=False) as pyf:
+    with pyfits.open(findstars_file,memmap=False) as pyf:
         mask = pyf[1].data['star_flag']==1
     nstars = numpy.count_nonzero(mask)
     ntot = len(mask)
@@ -224,10 +302,10 @@ def run_findstars(wdir, root, cat_file):
         hdu3 = pyfits.BinTableHDU(data)
         hdu3.name = 'LDAC_OBJECTS'
         hdu_list = pyfits.HDUList([hdu1, hdu2, hdu3])
-        new_cat_file = cat_file.replace(CATBACK,'%s-findstars' % CATBACK)
+        new_cat_file = cat_file.replace(CATBACK,'%s-psfex-input' % CATBACK)
         hdu_list.writeto(new_cat_file,clobber=True)
 
-    return new_cat_file, nstars, ntot
+    return findstars_file, new_cat_file, nstars, ntot
 
 def remove_bad_stars(wdir, root, cat_file, tbdata,
                      mag_cut, nbright_stars, max_mag,
@@ -338,7 +416,7 @@ def run_psfex(wdir, root, cat_file, psf_file, used_file, xml_file, resid_file):
     file was written.
     """
 
-    print('-'*70)
+    print('\n' + '-'*70)
 
     psfex_exe = files.get_psfex_exe()
     psfex_config = files.get_psfex_config()
@@ -347,9 +425,21 @@ def run_psfex(wdir, root, cat_file, psf_file, used_file, xml_file, resid_file):
         print('   deleting existing',psf_file)
         os.unlink(psf_file)
     print('   running psfex')
-    psf_cmd = '{psfex_exe} {cat_file} -c {config} -OUTCAT_TYPE FITS_LDAC -OUTCAT_NAME {used_file} -XML_NAME {xml_file}'.format(
-            psfex_exe=psfex_exe, cat_file=cat_file, config=psfex_config,
-            used_file=used_file, xml_file=xml_file)
+    psf_cmd = r"""
+    {psfex_exe} \
+            {cat_file} \
+            -c {config} \
+            -OUTCAT_TYPE FITS_LDAC \
+            -OUTCAT_NAME {used_file} \
+            -XML_NAME {xml_file}
+    """
+    psf_cmd = psf_cmd.format(
+        psfex_exe=psfex_exe,
+        cat_file=cat_file,
+        config=psfex_config,
+        used_file=used_file,
+        xml_file=xml_file,
+    )
     print(psf_cmd)
     os.system(psf_cmd)
 
@@ -373,7 +463,7 @@ def run_piff(wdir, root, img_file, cat_file, psf_file):
     file was written.
     """
 
-    print('-'*70)
+    print('\n' + '-'*70)
     piff_exe = files.get_piff_exe()
     piff_config = files.get_piff_config()
 
@@ -433,6 +523,21 @@ def move_files(wdir, odir, *args, **kwargs):
                 print('   move ',file,' to ',new_file)
                 shutil.move(file, new_file)
 
+def copy_file_to_dir(fname, odir):
+    oname=os.path.join(
+        odir,
+        os.path.basename(fname),
+    )
+
+    if os.path.exists(oname):
+        os.remove(oname)
+
+    print("copying %s -> %s" % (fname, oname))
+    shutil.copy(fname, oname)
+
+    return oname
+
+
 def clear_output(odir):
     if os.path.exists(odir):
         for f in os.listdir(odir):
@@ -490,62 +595,50 @@ def main():
     root = parse_file_name(args.image)
 
     print('   root:',root)
-    cat_file = None
 
     try:
 
-        if args.run_psfex or args.run_piff or args.use_findstars or args.mag_cut>0:
-            # Unpack the image file if necessary
-            img_file = copy_img_file(args.image, wdir)
+        # Unpack the image file if necessary
+        img_file = copy_file_to_dir(args.image, wdir)
 
-            # extract the saturation level, this is how desdm runs sextractor
-            # we need the fwhm for class star
-            # Also need the fwhm for doing the tape bumps.
-            sat, fwhm = read_image_header(img_file)
-            print('   fwhm = ',fwhm)
+        # extract the saturation level, this is how desdm runs sextractor
+        # we need the fwhm for class star
+        # Also need the fwhm for doing the tape bumps.
+        sat, fwhm = read_image_header(img_file)
+        print('   fwhm = ',fwhm)
 
-            cat_file = run_sextractor(wdir, root, img_file, sat, fwhm, args.noweight)
+        cat_file, seg_file = run_sextractor(wdir, root, img_file, sat, fwhm, args.noweight)
 
-            shutil.copy(cat_file, odir)
+        copy_file_to_dir(cat_file, odir)
+        copy_file_to_dir(seg_file, odir)
 
+        findstars_file, psf_input_file, nstars, ntot = run_findstars(
+            wdir,
+            root,
+            cat_file,
+        )
+        if psf_input_file == None:
+            print('     -- flag for findstars failure')
+            flag |= FINDSTARS_FAILURE
+            raise NoStarsException()
+        # Check if there are few or many staras.
+        if nstars < FEW_STARS:
+            print('     -- flag for too few stars: ',nstars)
+            flag |= TOO_FEW_STARS_FLAG
+        if nstars > MANY_STARS_FRAC * ntot:
+            print('     -- flag for too many stars: %d/%d'%(nstars,ntot))
+            flag |= TOO_MANY_STARS_FLAG
 
-        # if we want to use only the stars selected by findstars
-        if args.use_findstars:
-            tmp = cat_file
-            cat_file, nstars, ntot = run_findstars(
-                wdir,
-                root,
-                cat_file,
-            )
-            if cat_file == None:
-                print('     -- flag for findstars failure')
-                flag |= FINDSTARS_FAILURE
-                raise NoStarsException()
-            # Check if there are few or many staras.
-            if nstars < FEW_STARS:
-                print('     -- flag for too few stars: ',nstars)
-                flag |= TOO_FEW_STARS_FLAG
-            if nstars > MANY_STARS_FRAC * ntot:
-                print('     -- flag for too many stars: %d/%d'%(nstars,ntot))
-                flag |= TOO_MANY_STARS_FLAG
+        copy_file_to_dir(findstars_file, odir)
 
-
-        # If we want to cut the brighest magnitudes
-        if args.mag_cut>0 or args.max_mag>0 or args.reserve>0:
-            cat_file, nstars = remove_bad_stars(
-                    wdir, root, cat_file, tbdata,
-                    args.mag_cut, args.nbright_stars, args.max_mag,
-                    args.reserve, fwhm)
-            # Recheck this.
-            if nstars < FEW_STARS:
-                print('     -- flag for too few stars: ',nstars)
-                flag |= TOO_FEW_STARS_FLAG
-            if nstars <= 1:
-                raise NoStarsException()
+        data=fitsio.read(findstars_file, lower=True)
+        epsname=cat_file.replace('sxcat.fits','sizemag.eps')
+        plot_sizemag(data, epsname)
+        copy_file_to_dir(epsname, odir)
 
         if args.run_psfex or args.run_piff or args.use_findstars or args.mag_cut>0:
             # Get the median fwhm of the given stars
-            star_fwhm = get_fwhm(cat_file)
+            star_fwhm = get_fwhm(psf_input_file)
             print('   fwhm of stars = ',star_fwhm)
             print('   cf. header fwhm = ',fwhm)
             if star_fwhm[3] > HIGH_FWHM:
@@ -555,11 +648,6 @@ def main():
                 print('     -- flag for too high fwhm compared to fwhm from fits header')
                 flag |= TOO_HIGH_FWHM_FLAG
 
-        if args.use_findstars:
-            star_file = os.path.join(wdir,root+'_findstars.fits')
-            shutil.copy(star_file, odir)
-        else:
-            star_file = cat_file
 
         psf_file = os.path.join(wdir,root.replace('-image','-psfcat') + '.psf')
         used_file = os.path.join(wdir,root+'-psfcat.used.fits')
@@ -571,11 +659,11 @@ def main():
             # strips off the .fits ending, and replaces it with _ + cat_file
             resid_file1 = os.path.join(wdir,'resid.fits')
             print('resid_file1 = ',resid_file1)
-            cat_fname = os.path.basename(cat_file)
+            cat_fname = os.path.basename(psf_input_file)
             print('cat_fname = ',cat_fname)
             resid_file2 = os.path.join(wdir,'resid_'+cat_fname)
             print('resid_file2 = ',resid_file2)
-            success = run_psfex(wdir, root, cat_file, psf_file, used_file, xml_file,
+            success = run_psfex(wdir, root, psf_input_file, psf_file, used_file, xml_file,
                                 resid_file1)
             if success:
                 move_files(wdir, odir, psf_file)
@@ -583,11 +671,11 @@ def main():
                 flag |= PSFEX_FAILURE
 
         if args.run_piff:
-            cat_fname = os.path.basename(cat_file)
+            cat_fname = os.path.basename(psf_input_file)
             print('cat_fname = ',cat_fname)
             resid_file2 = os.path.join(wdir,'resid_'+cat_fname)
             print('resid_file2 = ',resid_file2)
-            success = run_piff(wdir, root, img_file, cat_file, psf_file)
+            success = run_piff(wdir, root, img_file, psf_input_file, psf_file)
             if success:
                 move_files(wdir, odir, psf_file)
             else:
@@ -607,7 +695,7 @@ def main():
         if args.rm_files:
             if os.path.exists(wdir):
                 print("removing working directory:",wdir)
-                #shutil.rmtree(wdir)
+                shutil.rmtree(wdir)
 
     print('done')
 

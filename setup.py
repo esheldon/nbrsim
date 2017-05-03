@@ -7,6 +7,7 @@ import numpy
 scripts=[
     'nbrsim-make-scripts',
     'nbrsim-reduce',
+    'nbrsim-make-meds',
 ]
 
 scripts=[os.path.join('bin',s) for s in scripts]

@@ -54,12 +54,11 @@ def get_rundir(run):
     bdir=get_basedir()
     return os.path.join(bdir, run)
 
-def get_script_dir(run):
+def get_script_dir(run, index):
     """
-    The script directory BASE_DIR/{run}/scripts
+    currently same as output dir
     """
-    bdir=get_basedir()
-    return os.path.join(bdir, run, 'scripts')
+    return get_output_dir(run, index)
 
 def get_output_dir(run, index):
     """
@@ -76,7 +75,7 @@ def get_galsim_script_file(run, index):
     get the script file path
     """
 
-    dir=get_script_dir(run)
+    dir=get_script_dir(run, index)
     basename = get_generic_basename(run, index=index, type='galsim', ext='sh')
     return os.path.join(dir, basename)
 
@@ -85,10 +84,18 @@ def get_reduce_script_file(run, index):
     get the script file path
     """
 
-    dir=get_script_dir(run)
+    dir=get_script_dir(run, index)
     basename = get_generic_basename(run, index=index, type='reduce', ext='sh')
     return os.path.join(dir, basename)
 
+def get_meds_script_file(run, index):
+    """
+    get the script file path
+    """
+
+    dir=get_script_dir(run, index)
+    basename = get_generic_basename(run, index=index, type='meds', ext='sh')
+    return os.path.join(dir, basename)
 
 
 def get_wq_dir(run):
@@ -115,6 +122,14 @@ def get_reduce_wq_file(run, index):
     basename = get_generic_basename(run, index=index, type='reduce', ext='yaml')
     return os.path.join(dir, basename)
 
+def get_meds_wq_file(run, index):
+    """
+    get the script file path
+    """
+    dir=get_wq_dir(run)
+    basename = get_generic_basename(run, index=index, type='meds', ext='yaml')
+    return os.path.join(dir, basename)
+
 
 
 def get_image_file(run, index):
@@ -126,12 +141,41 @@ def get_image_file(run, index):
 
     return os.path.join(dir, basename)
 
+def get_seg_file(run, index):
+    """
+    get the path to a image file
+    """
+    dir=get_output_dir(run, index)
+    basename = get_generic_basename(run, index=index, type='seg', ext='fits')
+
+    return os.path.join(dir, basename)
+
+def get_sxcat_file(run, index):
+    """
+    get the path to a image file
+    """
+    dir=get_output_dir(run, index)
+    basename = get_generic_basename(run, index=index, type='sxcat', ext='fits')
+
+    return os.path.join(dir, basename)
+
+def get_meds_file(run, index):
+    """
+    get the path to a image file
+    """
+    dir=get_output_dir(run, index)
+    basename = get_generic_basename(run, index=index, type='meds', ext='fits')
+
+    return os.path.join(dir, basename)
+
+
+
 def get_psfex_file(run, index):
     """
     get the path to a image file
     """
     dir=get_output_dir(run, index)
-    basename = get_generic_basename(run, index=index, type='psfex', ext='psf')
+    basename = get_generic_basename(run, index=index, type='psfcat', ext='psf')
 
     return os.path.join(dir, basename)
 
@@ -167,6 +211,16 @@ def get_reduce_log_file(run, index):
 
     dir=get_output_dir(run, index)
     basename = get_generic_basename(run, index=index, type='reduce', ext='log')
+
+    return os.path.join(dir, basename)
+
+def get_meds_log_file(run, index):
+    """
+    location of the log file
+    """
+
+    dir=get_output_dir(run, index)
+    basename = get_generic_basename(run, index=index, type='meds', ext='log')
 
     return os.path.join(dir, basename)
 
@@ -270,3 +324,8 @@ def get_findstars_config():
 def get_piff_config():
     d=get_share_dir()
     return os.path.join(d, 'piff.yaml')
+
+
+def get_meds_config():
+    d=get_share_dir()
+    return os.path.join(d, 'meds.yaml')
