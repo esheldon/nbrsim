@@ -1,0 +1,45 @@
+cutout_types: ['image','weight','seg','bmask']
+
+# row,col names in the coadd catalog
+row_name: "ywin_image"
+col_name: "xwin_image"
+ra_name: "alphawin_j2000"
+dec_name: "deltawin_j2000"
+
+# extension holding the sx catalog
+sxcat_ext: 2
+
+# scamp uses 1-offset positions
+position_offset: 1.0
+
+#
+# box size defaults
+#
+
+# number of object "sigma" to draw the box
+sigma_fac: 5.0
+
+# 2**N or 3*2**N for fast FFTS
+allowed_box_sizes': [
+        2,3,4,6,8,12,16,24,32,48,
+        64,96,128,192,256,
+        384,512,768,1024,1536,
+        2048,3072,4096,6144
+]
+
+min_box_size: 32
+max_box_size: 256
+
+# coadd images
+coadd_image_ext: 0
+coadd_bmask_ext: 1
+coadd_weight_ext: 2
+coadd_seg_ext: 0
+coadd_bkg_ext: -1
+
+# extensions for single-epoch images
+se_image_ext: 0
+se_bmask_ext: 1
+se_weight_ext: 2
+se_seg_ext: 0
+se_bkg_ext: -1
