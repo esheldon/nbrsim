@@ -1,7 +1,12 @@
+from __future__ import print_function
 import numpy
-import esutil as eu
-import desmeds
 import yaml
+
+import esutil as eu
+import meds
+import desmeds
+import fitsio
+
 from . import files
 
 
@@ -14,9 +19,6 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         self._load_config()
         self._set_extra_config(run, index)
         self._load_file_config()
-        self._load_catalog()
-        self._load_image_info()
-        self._load_meta_data()
 
     def _build_meta_data(self):
         """
@@ -27,7 +29,7 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         cfg.update(self)
         cfg = yaml.dump(cfg)
         dt = self._get_meta_data_dtype(cfg)
-        meta_data = zeros(1,dtype=dt)
+        meta_data = numpy.zeros(1,dtype=dt)
         meta_data['medsconf'] = self['medsconf']
         meta_data['config'] = cfg
         self.meta_data = meta_data
@@ -149,6 +151,8 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
             self['run'],
             self['index'],
         )
+
+        self.file_dict=fd
 
     def _write_meds_file(self):
         """
