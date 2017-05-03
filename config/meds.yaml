@@ -1,3 +1,5 @@
+medsconf: "v001"
+
 cutout_types: ['image','weight','seg','bmask']
 
 # row,col names in the coadd catalog
