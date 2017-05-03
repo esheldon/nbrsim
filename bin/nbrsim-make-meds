@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import nbrsim
+
+from argparse import ArgumentParser
+
+parser=ArgumentParser()
+
+parser.add_argument('run', help='processing run')
+parser.add_argument('index', help='processing run')
+
+def main():
+    args=parser.parse_args()
+
+    maker = nbrsim.medsmaker.NbrSimMEDSMaker(
+        args.run,
+        args.index,
+    )
+    maker.go()
+
+main()
