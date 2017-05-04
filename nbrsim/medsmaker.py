@@ -16,9 +16,14 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         load the config, catalog, and image info
         """
 
+        self['run'] = run
+        self['index'] = index
+
         self._load_config()
-        self._set_extra_config(run, index)
+        self._set_extra_config()
         self._load_file_config()
+        self._load_cat()
+        self._set_psfs()
 
     def _build_meta_data(self):
         """
@@ -42,16 +47,6 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         """
         fake this for the sim
         """
-        # do queries to get coadd object ids        
-        qwry = """
-        select
-            coadd_objects_id,
-            object_number
-        from
-            coadd_objects
-        where
-            COADD_OBJECTS.imageid_{band} = {id}
-        """
 
         dt=[
             ('coadd_objects_id','i8'),
@@ -60,11 +55,17 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         res=numpy.zeros(self.coadd_cat.size, dtype=dt)
 
         res['object_number'] = 1+numpy.arange(res.size)
-        res['coadd_objects_id'] = res['object_number']
+        res['coadd_objects_id'] = -1
 
         return res
 
     def _read_coadd_cat(self):
+        """
+        we already read the catalog
+        """
+        self.coadd_cat = self.sxcat
+
+    def _load_cat(self):
         """
         read the "coadd" catalog, sorting by the number field (which
         should already be the case)
@@ -87,16 +88,14 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         cat['ra'] = cat[self['ra_name']]
         cat['dec'] = cat[self['dec_name']]
 
-        self.coadd_cat = cat
+        self.sxcat = cat
 
 
-    def _set_extra_config(self, run, index):
+    def _set_extra_config(self):
         """
         set extra configuration parameters that are not user-controlled
         """
 
-        self['run'] = run
-        self['index'] = index
 
         self['extra_obj_data_fields'] = [
             ('number','i8'),
@@ -105,10 +104,54 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         ]
 
     def _load_config(self):
+        """
+        load the config and the galsim config
+        """
+
         fname = files.get_meds_config()
         super(NbrSimMEDSMaker,self)._load_config(fname)
 
+        # also pull in the galsim config to get the psf
+        self.galsim_conf = files.read_config(self['run'])
 
+    def _set_psfs(self):
+        """
+        set the list of psfs as galsim objects
+        """
+        import galsim
+        pconf = self.galsim_conf['psf']
+        wcsconf = self.galsim_conf['image']['wcs']
+
+        type=pconf['type']
+        if type == 'Moffat':
+            psf = galsim.Moffat(
+                beta=pconf['beta'],
+                fwhm=pconf['fwhm'],
+            )
+        elif type == 'Gaussian':
+            psf = galsim.Moffat(
+                fwhm=pconf['fwhm'],
+            )
+        else:
+            raise ValueError("bad psf type: '%s'" % type)
+
+        if 'ellip' in pconf:
+            psf = psf.shear(
+                g1=pconf['ellip']['g1'],
+                g2=pconf['ellip']['g2'],
+            )
+
+        print("psf:",psf)
+
+        wcs = galsim.JacobianWCS(
+            dudx = wcsconf['dudx'],
+            dudy = wcsconf['dudy'],
+            dvdx = wcsconf['dvdx'],
+            dvdy = wcsconf['dvdy'],
+        )
+        self.psf_data = [PSFMaker(psf, wcs)]
+
+        
     def _load_srclist(self):
         """
         there are currently no single epoch images
@@ -117,16 +160,7 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
 
     def _load_file_config(self):
         """
-        band: band in string form
-        coadd_image_url: string
-        coadd_seg_url: string
-        coadd_magzp: float
-        ngwint_flist: string
-            path to the ngwint file list
-        seg_flist: string
-            path to the seg file list
-        bkg_flist: string
-            path to the bkg file list
+        fake up the file config
         """
 
         fd={}
@@ -164,6 +198,7 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
             self.obj_data,
             self.image_info,
             config=self,
+            psf_data=self.psf_data,
             meta_data=self.meta_data,
         )
 
@@ -173,5 +208,22 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
 
         tmpdir = desmeds.files.get_temp_dir()
 
+        #maker.write(fname)
         with StagedOutFile(fname,tmpdir=tmpdir) as sf:
             maker.write(sf.path)
+
+class PSFMaker(object):
+    def __init__(self, psfobj, wcs):
+        self.psfobj = psfobj
+        self.wcs = wcs
+
+        # assume constant for now
+        self.psfim = psfobj.drawImage(
+            wcs = wcs,
+        ).array
+
+    def get_shape(self, *args, **kw):
+        return self.psfim.shape
+
+    def get_rec(self, *args, **kw):
+        return self.psfim.copy()
