@@ -59,7 +59,7 @@ class ScriptWriter(dict):
         text=_script_template % self
 
         script_fname=files.get_galsim_script_file(self['run'], index)
-        print("writing:",script_fname)
+        #print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
@@ -74,7 +74,7 @@ class ScriptWriter(dict):
         text=_reduce_script_template % self
 
         script_fname=files.get_reduce_script_file(self['run'], index)
-        print("writing:",script_fname)
+        #print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
@@ -87,7 +87,7 @@ class ScriptWriter(dict):
         text=_meds_script_template % self
 
         script_fname=files.get_meds_script_file(self['run'], index)
-        print("writing:",script_fname)
+        #print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 

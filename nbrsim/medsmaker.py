@@ -55,7 +55,7 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         res=numpy.zeros(self.coadd_cat.size, dtype=dt)
 
         res['object_number'] = 1+numpy.arange(res.size)
-        res['coadd_objects_id'] = -1
+        res['coadd_objects_id'] = res['object_number']
 
         return res
 
@@ -222,8 +222,51 @@ class PSFMaker(object):
             wcs = wcs,
         ).array
 
+        self.moms = moments(self.psfim)
+
+        self.sigma = numpy.sqrt(self.moms['T']/2.0)
+
+    def get_cen(self, *args, **kw):
+        return self.moms['cen'].copy()
+
+    def get_sigma(self, *args, **kw):
+        return self.sigma
+
     def get_shape(self, *args, **kw):
         return self.psfim.shape
 
     def get_rec(self, *args, **kw):
         return self.psfim.copy()
+
+def moments(image):
+    """
+    Measure the unweighted centroid and second moments of an image.
+    """
+
+    # ogrid is so useful
+    row,col=numpy.ogrid[0:image.shape[0], 0:image.shape[1]]
+
+    Isum = image.sum()
+
+    rowcen = (image*row).sum()/Isum
+    colcen = (image*col).sum()/Isum
+    cen = numpy.array( [rowcen,colcen] )
+
+    rm = row - cen[0]
+    cm = col - cen[1]
+
+    Irr = (image*rm**2).sum()/Isum
+    Irc = (image*rm*cm).sum()/Isum
+    Icc = (image*cm**2).sum()/Isum
+
+    T=Irr+Icc
+    e1=(Icc-Irr)/T
+    e2=2.*Irc/T
+
+    return {
+        'cen':cen,
+        'T':Irr + Icc,
+        'e1':e1,
+        'e2':e2,
+    }
+
