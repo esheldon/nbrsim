@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import numpy
 import yaml
 
@@ -102,6 +103,12 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
             ('input_row','f8'),
             ('input_col','f8'),
         ]
+
+        # -qz 4.0 instead of -q 4.0
+        # this means preserve zero pixels
+        self['fpack_command'] = \
+            'fpack -qz 4.0 -t %d,%d {fname}' % tuple(self['fpack_dims'])
+
 
     def _load_config(self):
         """
@@ -210,7 +217,27 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
 
         #maker.write(fname)
         with StagedOutFile(fname,tmpdir=tmpdir) as sf:
-            maker.write(sf.path)
+        #if True:
+
+            ucfile = os.path.basename(sf.path)
+            ucfile = ucfile.replace('.fits.fz','.fits')
+            ucfile = os.path.join(tmpdir, ucfile)
+
+            maker.write(ucfile)
+
+            cmd = self['fpack_command'].format(fname=ucfile)
+            print("compressing")
+            print(cmd)
+            ret=os.system(cmd)
+
+            if ret != 0:
+                raise RuntimeError("failed to compress file")
+            
+            if not os.path.exists(sf.path):
+                raise RuntimeError("failed to make compressed meds "
+                                   "file: '%s'" % sf.path)
+
+            os.remove(ucfile)
 
 class PSFMaker(object):
     def __init__(self, psfobj, wcs):

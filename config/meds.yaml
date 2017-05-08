@@ -33,11 +33,18 @@ min_box_size: 32
 max_box_size: 256
 
 # coadd images
-coadd_image_ext: 0
-coadd_bmask_ext: 1
-coadd_weight_ext: 2
-coadd_seg_ext: 0
+coadd_image_ext: 1
+coadd_bmask_ext: 2
+coadd_weight_ext: 3
+coadd_seg_ext: 1
 coadd_bkg_ext: -1
+
+
+#coadd_image_ext: 0
+#coadd_bmask_ext: 1
+#coadd_weight_ext: 2
+#coadd_seg_ext: 0
+#coadd_bkg_ext: -1
 
 # extensions for single-epoch images
 se_image_ext: 0
@@ -45,3 +52,8 @@ se_bmask_ext: 1
 se_weight_ext: 2
 se_seg_ext: 0
 se_bkg_ext: -1
+
+# for fpacking the file
+fpack_dims: [10240,1]
+
+

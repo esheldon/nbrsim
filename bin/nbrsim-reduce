@@ -230,9 +230,19 @@ def run_sextractor(wdir, root, img_file, sat, fwhm, noweight):
         sat=sat,
     )
 
+
     print(cat_cmd)
     os.system(cat_cmd)
-    return cat_file, seg_file
+
+    fpack_cmd="fpack -qz 4.0 -t 10240,1 {seg_file}".format(
+        seg_file=seg_file,
+    )
+    os.system(fpack_cmd)
+    fz_seg_file = seg_file+'.fz'
+
+
+
+    return cat_file, fz_seg_file
 
 def run_findstars(wdir, root, cat_file):
     """
@@ -548,6 +558,15 @@ def clear_output(odir):
                 print(e)
                 pass
 
+def funpack_file(fname):
+    newfname=fname.replace(".fz","")
+    assert newfname != fname
+
+    cmd="funpack %s" % fname
+    os.system(cmd)
+
+    return newfname
+
 def main():
     args = parse_args()
 
@@ -576,13 +595,8 @@ def main():
         if not os.path.exists(odir): raise
     print('odir = ',odir)
 
-    # Make the work directory for this exposure and clear it if necessary.
-    bname=os.path.basename(args.image)
-
-    wdir,ext= os.path.splitext(bname)
+    wdir = os.path.basename(args.image).replace('.fits.fz','')
     wdir = os.path.join(work,wdir)
-    if args.clear_output:
-        clear_output(wdir)
 
     try:
         os.makedirs(wdir)
@@ -590,16 +604,30 @@ def main():
         if not os.path.exists(wdir): raise
     print('wdir = ',wdir)
 
+    if args.clear_output:
+        clear_output(wdir)
+
+    fz_img_file = copy_file_to_dir(args.image, wdir)
+    img_file = funpack_file(fz_img_file)
+
+    bname=os.path.basename(img_file)
+
+
+
+
+    # Make the work directory for this exposure and clear it if necessary.
+
+
     flag = 0
 
-    root = parse_file_name(args.image)
+    root = parse_file_name(img_file)
 
     print('   root:',root)
+
 
     try:
 
         # Unpack the image file if necessary
-        img_file = copy_file_to_dir(args.image, wdir)
 
         # extract the saturation level, this is how desdm runs sextractor
         # we need the fwhm for class star

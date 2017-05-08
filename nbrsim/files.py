@@ -105,6 +105,12 @@ def get_wq_dir(run):
     bdir = os.environ['TMPDIR']
     return os.path.join(bdir, 'nbrsim', run, 'scripts')
 
+def get_lsf_dir(run):
+    """
+    We don't want wq stuff on gpfs
+    """
+    return get_wq_dir(run)
+
 
 def get_galsim_wq_file(run, index):
     """
@@ -130,23 +136,58 @@ def get_meds_wq_file(run, index):
     basename = get_generic_basename(run, index=index, type='meds', ext='yaml')
     return os.path.join(dir, basename)
 
+def get_galsim_lsf_file(run, index):
+    """
+    get the script file path
+    """
+    dir=get_lsf_dir(run)
+    basename = get_generic_basename(run, index=index, type='galsim', ext='lsf')
+    return os.path.join(dir, basename)
+
+def get_reduce_lsf_file(run, index):
+    """
+    get the script file path
+    """
+    dir=get_lsf_dir(run)
+    basename = get_generic_basename(run, index=index, type='reduce', ext='lsf')
+    return os.path.join(dir, basename)
+
+def get_meds_lsf_file(run, index):
+    """
+    get the script file path
+    """
+    dir=get_lsf_dir(run)
+    basename = get_generic_basename(run, index=index, type='meds', ext='lsf')
+    return os.path.join(dir, basename)
 
 
-def get_image_file(run, index):
+
+
+def get_image_file(run, index, ext='fits.fz'):
     """
     get the path to a image file
     """
     dir=get_output_dir(run, index)
-    basename = get_generic_basename(run, index=index, type='image', ext='fits')
+    basename = get_generic_basename(
+        run,
+        index=index,
+        type='image',
+        ext=ext,
+    )
 
     return os.path.join(dir, basename)
 
-def get_seg_file(run, index):
+def get_seg_file(run, index, ext='fits.fz'):
     """
     get the path to a image file
     """
     dir=get_output_dir(run, index)
-    basename = get_generic_basename(run, index=index, type='seg', ext='fits')
+    basename = get_generic_basename(
+        run,
+        index=index,
+        type='seg',
+        ext=ext,
+    )
 
     return os.path.join(dir, basename)
 
@@ -155,16 +196,26 @@ def get_sxcat_file(run, index):
     get the path to a image file
     """
     dir=get_output_dir(run, index)
-    basename = get_generic_basename(run, index=index, type='sxcat', ext='fits')
+    basename = get_generic_basename(
+        run,
+        index=index,
+        type='sxcat',
+        ext='fits',
+    )
 
     return os.path.join(dir, basename)
 
-def get_meds_file(run, index):
+def get_meds_file(run, index, ext='fits.fz'):
     """
     get the path to a image file
     """
     dir=get_output_dir(run, index)
-    basename = get_generic_basename(run, index=index, type='meds', ext='fits')
+    basename = get_generic_basename(
+        run,
+        index=index,
+        type='meds',
+        ext=ext,
+    )
 
     return os.path.join(dir, basename)
 
@@ -275,13 +326,15 @@ def read_yaml(fname):
 
 # executables
 def get_sx_exe():
-    return '/astro/u/rarmst/soft/bin/sex'
+    return os.environ['SX_EXE']
+    #return '/astro/u/rarmst/soft/bin/sex'
 
 def get_psfex_exe():
-    return '/astro/u/rarmst/soft/bin/psfex'
+    return os.environ['PSFEX_EXE']
+    #return '/astro/u/rarmst/soft/bin/psfex'
 
 def get_findstars_exe():
-    return '/astro/u/mjarvis/bin/findstars'
+    return 'findstars'
 
 def get_piff_exe():
     return '/astro/u/mjarvis/bin/piffify'
