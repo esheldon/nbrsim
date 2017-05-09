@@ -238,6 +238,8 @@ class ScriptWriter(dict):
             lsf_fname = lsf_fname.replace('.lsf','-missing.lsf')
 
             psfex_file = files.get_psfex_file(self['run'], index)
+            #seg_file = files.get_seg_file(self['run'], index)
+
             if os.path.exists(psfex_file):
                 if os.path.exists(lsf_fname):
                     os.remove(lsf_fname)
