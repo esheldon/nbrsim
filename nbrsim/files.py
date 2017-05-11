@@ -205,6 +205,21 @@ def get_sxcat_file(run, index):
 
     return os.path.join(dir, basename)
 
+def get_sxcat_match_file(run, index):
+    """
+    get the path to the sxcat/truth matched file
+    """
+    dir=get_output_dir(run, index)
+    basename = get_generic_basename(
+        run,
+        index=index,
+        type='match',
+        ext='fits',
+    )
+
+    return os.path.join(dir, basename)
+
+
 def get_meds_file(run, index, ext='fits.fz'):
     """
     get the path to a image file

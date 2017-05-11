@@ -72,7 +72,8 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
         should already be the case)
         """
 
-        fname = files.get_sxcat_file(self['run'],self['index'])
+        #fname = files.get_sxcat_file(self['run'],self['index'])
+        fname = files.get_sxcat_match_file(self['run'],self['index'])
 
         print('reading coadd cat:',fname)
         cat = fitsio.read(
@@ -102,6 +103,8 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
             ('number','i8'),
             ('input_row','f8'),
             ('input_col','f8'),
+            ('shear_index','i2'),
+            ('shear_true','f8',2),
         ]
 
         # -qz 4.0 instead of -q 4.0
@@ -179,7 +182,7 @@ class NbrSimMEDSMaker(desmeds.DESMEDSMakerDESDM):
             self['run'],
             self['index'],
         )
-        fd['coadd_cat_url'] = files.get_sxcat_file(
+        fd['coadd_cat_url'] = files.get_sxcat_match_file(
             self['run'],
             self['index'],
         )

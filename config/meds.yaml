@@ -9,7 +9,7 @@ ra_name: "alphawin_j2000"
 dec_name: "deltawin_j2000"
 
 # extension holding the sx catalog
-sxcat_ext: 2
+sxcat_ext: 1
 
 # scamp uses 1-offset positions
 position_offset: 1.0

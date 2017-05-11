@@ -17,6 +17,7 @@ import fitsio
 import shutil
 import biggles
 
+import nbrsim
 from nbrsim import files
 
 # How many stars are too few or too many?
@@ -78,6 +79,8 @@ def parse_args():
     parser.add_argument('--reserve', default=0, type=float,
                         help='Reserve some fraction of the good stars for testing')
 
+    parser.add_argument('--matchrad', default=8, type=float,
+                        help='match radius in pixels')
 
     args = parser.parse_args()
 
@@ -243,6 +246,30 @@ def run_sextractor(wdir, root, img_file, sat, fwhm, noweight):
 
 
     return cat_file, fz_seg_file
+
+def match2truth(args, cat_file):
+
+    truth_file=args.image.replace('-image.fits.fz','-truth.fits')
+
+    match_file=cat_file.replace('sxcat.fits','match.fits')
+
+    assert truth_file != args.image
+    assert match_file != cat_file
+
+    sx = fitsio.read(cat_file, ext=2, lower=True)
+    truth = fitsio.read(truth_file)
+
+    radius=8 # pixels
+    matchdata = nbrsim.util.match_truth(
+        sx,
+        truth,
+        radius=args.matchrad,
+    )
+
+    print("writing:",match_file)
+    fitsio.write(match_file,  matchdata, clobber=True)
+    return match_file
+
 
 def run_findstars(wdir, root, cat_file):
     """
@@ -607,6 +634,7 @@ def main():
     if args.clear_output:
         clear_output(wdir)
 
+
     fz_img_file = copy_file_to_dir(args.image, wdir)
     img_file = funpack_file(fz_img_file)
 
@@ -637,8 +665,11 @@ def main():
 
         cat_file, seg_file = run_sextractor(wdir, root, img_file, sat, fwhm, args.noweight)
 
+        match_file = match2truth(args, cat_file)
+
         copy_file_to_dir(cat_file, odir)
         copy_file_to_dir(seg_file, odir)
+        copy_file_to_dir(match_file, odir)
 
         findstars_file, psf_input_file, nstars, ntot = run_findstars(
             wdir,
