@@ -183,6 +183,9 @@ class ScriptWriter(dict):
         self['job_name'] = job_name
         self['logfile'] = files.get_galsim_log_file(self['run'], index)
         self['script']=files.get_galsim_script_file(self['run'], index)
+        self['ncores']=2
+        self['extra_requirements'] = '#BSUB -R "span[hosts=1]"'
+
         text = _lsf_template  % self
 
         print("writing:",lsf_fname)
@@ -251,6 +254,10 @@ class ScriptWriter(dict):
         self['job_name'] = job_name
         self['logfile'] = files.get_reduce_log_file(self['run'], index)
         self['script']=files.get_reduce_script_file(self['run'], index)
+        self['ncores']=1
+        self['extra_requirements'] = ''
+
+
         text = _lsf_template  % self
 
         print("writing:",lsf_fname)
@@ -317,6 +324,9 @@ class ScriptWriter(dict):
         self['job_name'] = job_name
         self['logfile']  = files.get_meds_log_file(self['run'], index)
         self['script']   =files.get_meds_script_file(self['run'], index)
+        self['ncores']=1
+        self['extra_requirements'] = ''
+
         text = _lsf_template  % self
 
         print("writing:",lsf_fname)
@@ -453,10 +463,11 @@ job_name: "%(job_name)s"
 
 _lsf_template = """#!/bin/bash
 #BSUB -J %(job_name)s
-#BSUB -n 1
+#BSUB -n %(ncores)d
 #BSUB -oo ./%(job_name)s.oe
 #BSUB -W 12:00
 #BSUB -R "linux64 && rhel60 && scratch > 2"
+%(extra_requirements)s
 
 echo "working on host: $(hostname)"
 uptime
