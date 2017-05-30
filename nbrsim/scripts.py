@@ -366,7 +366,7 @@ class ScriptWriter(dict):
 
         self.conf = files.read_config(self['run'])
 
-#
+
 # image creation
 #
 _galsim_script_template = r"""#!/bin/bash
