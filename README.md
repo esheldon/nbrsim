@@ -5,7 +5,7 @@ Framework to run simulations for testing the effect of neighbors on deblending
 and shear. Most people will use this library to access the files.
 
 Any galsim config files with the proper naming scheme can be used, but we are
-co-developing a set of scripts in the https://github.com/esheldon/nbrsim_config
+co-developing a set of scripts in the https://github.com/esheldon/nbrsim-config
 repository
 
 Examples accessing output files.
