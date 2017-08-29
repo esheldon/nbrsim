@@ -41,7 +41,7 @@ Examples running the sims
 
 run=v001
 system=wq
-nbrsim-make-scripts $run $system
+nbrsim-make-scripts --system=$system $run
 
 # You can also have some additional commands run.  For
 # example, this sets up an anaconda environment

@@ -46,6 +46,9 @@ class ScriptWriter(dict):
             elif self['system'] == 'lsf':
                 self._write_lsf(i)
 
+            elif self['system']=='shell':        
+                # don't write batch scripts
+                pass
             else:
                 raise RuntimeError("bad system: '%s'" % self['system'])
 
@@ -80,7 +83,7 @@ class ScriptWriter(dict):
         text=_galsim_script_template % self
 
         script_fname=files.get_galsim_script_file(self['run'], index)
-        #print("writing:",script_fname)
+        print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
@@ -95,7 +98,7 @@ class ScriptWriter(dict):
         text=_reduce_script_template % self
 
         script_fname=files.get_reduce_script_file(self['run'], index)
-        #print("writing:",script_fname)
+        print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
@@ -108,7 +111,7 @@ class ScriptWriter(dict):
         text=_meds_script_template % self
 
         script_fname=files.get_meds_script_file(self['run'], index)
-        #print("writing:",script_fname)
+        print("writing:",script_fname)
         with open(script_fname, 'w') as fobj:
             fobj.write(text)
 
@@ -343,12 +346,14 @@ class ScriptWriter(dict):
 
         for i in xrange(self['njobs']):
             output_dir = files.get_output_dir(self['run'],i)
-            script_dir = files.get_script_dir(self['run'],i)
-
             dirs += [output_dir]
 
-            if script_dir != output_dir:
-                dirs += [script_dir]
+            if self['system'] != 'shell':
+                script_dir = files.get_script_dir(self['run'],i)
+
+
+                if script_dir != output_dir:
+                    dirs += [script_dir]
 
         for d in dirs:
             if not os.path.exists(d):
